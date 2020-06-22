@@ -74,11 +74,15 @@ trait2_equivalent = VCMTrait(["x2 + 3x1", "2 +2x1"], DataFrame(X), [sigma...], [
 
 # simulate the SnpArray
 G = snparray_simulation([0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5], n)
+genovec = SnpBitMatrix{Float64}(G, model=ADDITIVE_MODEL, center=true, scale=true);
 γ = rand(7, 2)
 
 vcmOBJ =  VCMTrait(X, B, G, γ, varcomp)
 vcmOBJ_equivalent =  VCMTrait(X, B, G, γ, [Σ...], [V...])
-
+@test (vcmOBJ_equivalent.μ) == vcmOBJ.μ
+A = convert(Matrix{Float64}, G, model=ADDITIVE_MODEL, center=false, scale=false);
+@test vcmOBJ.μ == (X*B + A*γ)
+@test vcmOBJ_equivalent.μ == X*B + A*γ  # make sure the mean component is correct when splitting up genotypes and non genetic covariates
 @test vcmOBJ.vc[1].V == V[1]
 @test vcmOBJ_equivalent.vc[1].V == V[1]
 # check data was copied correctly

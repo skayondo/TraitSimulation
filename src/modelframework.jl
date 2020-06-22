@@ -50,10 +50,8 @@ function GLMTrait(X::Matrix{T}, β::Vector{T}, G::SnpArray, γ::Vector{T},
 	 distT = Base.typename(typeof(distribution)).wrapper
  	 n = size(X, 1)
 	 η = Vector{T}(undef, n)
- 	 clamp_eta!(η, X, β, distT; lb = lb , ub = ub)
-	 genovec = zeros(Float64, size(G))
- 	 Base.copyto!(genovec, @view(G[:, :]), model = ADDITIVE_MODEL, impute = true)
-  return GLMTrait(X, β, genovec, γ, η, distribution, link)
+ 	 clamp_eta!(η, X, β, G, γ, distT; lb = lb , ub = ub)
+  return GLMTrait(X, β, G, γ, η, distribution, link)
 end
 
 function GLMTrait(X::Matrix{T}, β::Vector{T}, distribution::D, link::linkT; lb = -20, ub = 20) where {D, linkT, T <: BlasReal}
@@ -66,29 +64,45 @@ function GLMTrait(X::Matrix{T}, β::Vector{T}, distribution::D, link::linkT; lb 
     GLMTrait(X, β, genovec, [β[end]], η, distribution, link)
 end
 
-# clamp the trait values
-  # specific to Poisson and NegativeBinomial
-  function clamp_eta!(η::AbstractVecOrMat, X::Matrix{T}, β::AbstractVecOrMat,
-	   distT::Union{Type{Poisson}, Type{NegativeBinomial}}; lb = -20, ub = 20) where T <: BlasReal
-	  mul!(η, X, β)
-	  η .= map(y -> y >= ub ? ub : y, η)
-  end
-
-  # specific to Bernoulli and Binomial
-  function clamp_eta!(η::AbstractVecOrMat, X::Matrix{T}, β::AbstractVecOrMat,
-	   distT::Union{Type{Bernoulli}, Type{Binomial}}; lb = -20, ub = 20) where T <: BlasReal
-	  mul!(η, X, β)
-	  clamp!(η, lb, ub)
-	  η
-  end
 
   # all others
-  function clamp_eta!(η::AbstractVecOrMat, X::Matrix{T}, β::AbstractVecOrMat,
+  function clamp_eta!(η::AbstractVecOrMat, X::Matrix{T}, β::AbstractVecOrMat, G::SnpArray, γ::Vector{T},
 	   distT::Type{D}; lb = -20, ub = 20) where {D, T <: Real}
 	  mul!(η, X, β)
+	  η_snp = zeros(size(η))
+	  genovec = SnpBitMatrix{Float64}(G, model=ADDITIVE_MODEL, center=false, scale=false);
+	  mul!(η_snp, genovec, γ)
+	  BLAS.axpy!(1.0, η_snp, η)
+	  clamp_eta_dist!(η, distT; lb = lb, ub = ub)
 	  η
   end
 
+  function clamp_eta!(η::AbstractVecOrMat, X::Matrix{T}, β::AbstractVecOrMat,
+	 distT::Type{D}; lb = -20, ub = 20) where {D, T <: Real}
+	mul!(η, X, β)
+	clamp_eta_dist!(η, distT; lb = lb, ub = ub)
+	η
+  end
+
+  # clamp the trait values
+    # specific to Poisson and NegativeBinomial
+    function clamp_eta_dist!(η::AbstractVecOrMat,
+  	   distT::Union{Type{Poisson}, Type{NegativeBinomial}}; lb = -20, ub = 20) where T <: BlasReal
+  	  map!(y -> y >= ub ? ub : y, η, η)
+	  η
+    end
+
+    # specific to Bernoulli and Binomial
+    function clamp_eta_dist!(η::AbstractVecOrMat,
+  	  distT::Union{Type{Bernoulli}, Type{Binomial}}; lb = -20, ub = 20) where T <: BlasReal
+  	  clamp!(η, lb, ub)
+  	  η
+    end
+
+  function clamp_eta_dist!(η::AbstractVecOrMat,
+	 distT::Type{D}; lb = -20, ub = 20) where {D, T <: Real}
+	 nothing
+  end
 
 # better printing; customize how a type is summarized in a REPL
 function Base.show(io::IO, x::GLMTrait)
@@ -143,15 +157,15 @@ end
 
 function VCMTrait(X::Matrix{T}, β::Matrix{T}, G::SnpArray, γ::Matrix{T},
 	 vc::Vector{VarianceComponent}) where T <: BlasReal
-	n, p, m, d = size(X, 1), size(X, 2), length(vc), size(β, 2)
-	genovec = SnpBitMatrix{Float64}(G, model=ADDITIVE_MODEL, center=true, scale=true);
-	μ = Matrix{T}(undef, n, 2)
-	μ_null = zeros(n, d)
-	LinearAlgebra.mul!(μ_null, X, β)
+	n, p, d = size(X, 1), size(X, 2), size(β, 2)
+	genovec = SnpBitMatrix{Float64}(G, model=ADDITIVE_MODEL, center=false, scale=false);
+	μ_snp = zeros(n)
+	μ = zeros(n, d)
+	LinearAlgebra.mul!(μ, X, β)
 	for j in 1:size(μ, 2)
-		mul!(μ[:, j], genovec, γ[:, j]);
+		mul!(μ_snp, genovec, γ[:, j])
+		μ[:, j] = BLAS.axpy!(1.0, μ_snp, μ[:, j])
 	end
-	BLAS.axpby!(1.0, μ_null, 1.0, μ)
 	# constructor
 	VCMTrait(X, β, genovec, γ, vc, μ)
 end
@@ -159,7 +173,7 @@ end
 function VCMTrait(X::Matrix{T}, β::Matrix{T}, G::SnpArray,
 	 γ::Matrix{T}, Σ::Vector{Matrix{T}}, V::Vector{Matrix{T}}) where T <: BlasReal
 	vc = [VarianceComponent(Σ[i], V[i]) for i in 1:length(V)]
-	return VCMTrait(X, β, vc)
+	return VCMTrait(X, β, G, γ, vc)
 end
 
 function VCMTrait(X::Matrix{T}, β::Matrix{T},

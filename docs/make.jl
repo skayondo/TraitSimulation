@@ -14,6 +14,7 @@ makedocs(
         "Real Data Examples" => Any[
             "examples/ukbiobank_vcm_power.md",
 	    "examples/ukbiobank_ordered_multinomial_power.md"],
+	"Alternative Model Specification" => "examples/modelspecification.md",
 	"Exploring GPU Potential" => "examples/GPU.md",
      ]
 )

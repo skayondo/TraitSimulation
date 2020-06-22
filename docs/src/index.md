@@ -9,6 +9,15 @@ We present TraitSimulation, an open-source Julia package that makes it trivial t
 
 Statistical geneticists employ simulation to estimate the power of proposed studies, test new analysis tools, and evaluate properties of causal models. Although there are existing trait simulators, there is ample room for modernization of currently available simulation models and computing platforms.For example, most phenotype simulators are limited to Gaussian traits or traits transformable to normality, ignoring qualitative traits and realistic, non-normal trait distributions. Modern computer languages, such as Julia, that accommodate parallelization and cloud-based computing are now mainstream but rarely used inolder applications. To meet the challenges of contemporary big studies, it is nearly imperative for geneticists to adopt new computational tools. Although GPU and Threading capabilities are relatively new and under current development, we explore the potential of these language features and present the results to users who are interested in Julia. Users who wish to play with the prototype GPU source code can find the file in the test folder, but we warn users that the CuArrays package will not install if the proper GPU machinery is not detected. 
 
+### Alternative Model Specification
+For added flexibility, we use the julia language's multiple dispatch feature to provide a variety of ways to specify the simulation model at the users convenience. We encourage users to choose whichever method most suits their needs. 
+
+```@contents
+Pages = [
+    "examples/modelspecification.md"]
+Depth = 2
+```
+
 ## Demonstration
 
 ##### Example Data
@@ -158,8 +167,6 @@ Depth = 2
 ```
 
 ## GLM Traits from Unrelated Individuals
-
-$ Y_{n \times 1} \sim Poisson(\mu_{n \times 1} = X\beta)$
 
 
 ```julia

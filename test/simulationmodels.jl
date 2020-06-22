@@ -68,14 +68,14 @@ Ordinal_Model_Test = OrderedMultinomialTrait(X, beta, θ, link)
 
 # make sure GLM simulation works
 dist = Poisson()
-link = IdentityLink()
+link = LogLink()
 beta = [21.0, 5.0]
-glmtraitobject2 = GLMTrait(abs.(X), beta, dist, link)
+glmtraitobject2 = GLMTrait(X, beta, dist, link)
 
 # check if clamper worked
 @test sum(glmtraitobject2.η .> 20.0) == 0
 
-@test  eltype(simulate(glmtraitobject2)) == Int64
+@test eltype(simulate(glmtraitobject2)) == Int64
 
 dist = Bernoulli()
 link = LogitLink()
@@ -118,17 +118,22 @@ y_glmm = simulate(glmtraitobject6)
 
 @test length(simulate(glmtraitobject6, number_independent_simulations)) == number_independent_simulations
 
-
 # simulate the SnpArray
 G = snparray_simulation([0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5], n)
 γ = rand(7)
+dist = Poisson()
+link = LogLink()
+glmtraitobject7 = GLMTrait(X, beta, G, γ, dist, link)
+A = convert(Matrix{Float64}, G, model=ADDITIVE_MODEL, center=false, scale=false);
 
-glmtraitobject7 =  GLMTrait(X, beta, G, γ, dist, link)
 
-@test glmtraitobject7.dist  == Gamma
+@test sum(glmtraitobject7.η .> 20) == 0
+@test glmtraitobject7.η == log.(glmtraitobject7.μ)
+@test glmtraitobject7.dist  == Poisson
 @test eltype(simulate(glmtraitobject7)) == eltype(dist)
 
-@test length(simulate(glmtraitobject7, number_independent_simulations)) == number_independent_simulations
+@test length(simulate(glmtraitobject7, number_independent_simulations))  == number_independent_simulations
+
 
 @test GLMTrait(X, beta, G, γ, dist, link) != empty
 
