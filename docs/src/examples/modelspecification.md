@@ -116,7 +116,7 @@ y1 = simulate(genetic_model1)
 
 
 
-## method 2: VCMTrait(mean_formula, DataFrame(X), variance_formula)
+## method 2: VCMTrait(mean_ formulas, DataFrame, variance_ formula)
 
     **mean_formulas: Vector of strings, specifying mean effect for each trait**
     **DataFrame: Named DataFrame of both genetic and non-genetic regression coefficients**
