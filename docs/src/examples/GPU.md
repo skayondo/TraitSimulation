@@ -355,12 +355,3 @@ Y_d = zeros(CuArray{Float32}, size(trait.Z))
       --------------
       samples:          2430
       evals/sample:     1
-
-
-### Threading:
-
-For users who wish to do multiple simulation runs simultaneously, we recommend to set the machinery to use threading. Users can check using the command: `Threads.nthreads()` to ensure multi-threading is on. [TraitSimulation](https://github.com/OpenMendel/TraitSimulation.jl/blob/master/src/TraitSimulation.jl#L188) will automatically use the Threading option for multiple TraitSimulation. To set the number of threads, users should follow the documentation on [Threads.jl](https://docs.julialang.org/en/v1/base/multi-threading/) and ensure before starting Julia to specify the desired number of threads using ` export JULIA_NUM_THREADS=4`.
-
-For users who are using the Threading option and are seeing some variation in the benchmarking results, make sure that the julia number of threads and the BLAS number of threads are not confusing one another and specify the command: `LinearAlgebra.BLAS.set_num_threads(1)` to make simulations more consistent.
-
-
